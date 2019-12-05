@@ -1,11 +1,26 @@
-# set local directory
-setwd("C:/Users/zhang/Desktop/fall 2019/git/506/project")
+---
+title: "Stats 506: Group Project"
+author: "Yuying Wang, Yehao Zhang"
+group number: "6"
+date: "December 5, 2019"
+output: html_document
+---
 
-# load packages
+## Core Analysis (R)
+
+As discussed in the data section, first perform data cleaning on each dataset and merge them into one. Finally, the rows that contain NAs are removed.
+
+```{r}
+
 library(tidyverse)
 library(data.table)
 library(foreign)
 library(MASS)
+
+```
+
+
+```{r}
 
 ## Data
 
@@ -34,14 +49,25 @@ sleep = merge(sleep_disorder, tot_nutrition, by = "respondent_ID") %>%
 
 sleep # the cleaned data
 
+```
 
-## Ordered logistic regression
+
+Now the dataset "sleep" is ready to fit the ordered logistic regression model.
+
+```{r}
 
 # fit ordered logit model 
 m <- polr(sleepy_freq ~ sleep_hr + CHO_level + six_month + gender + age, data = sleep, Hess = TRUE)
 
 # view a summary of the model
 summary(m)
+
+```
+
+
+Next, the p-values are calculated by comparing the t-value against the standard normal distribution. The 95% CI for the parameter estimates could be obtained using the "confint" function.
+
+```{r}
 
 # store the coefficientts
 mcoef <- coef(summary(m))
@@ -53,9 +79,13 @@ mcoef
 
 # 95% CI
 (ci <- confint(m))
-ci
-# Interpretation: e.g. for CHO_level, we would say that for a one unit increase in CHO_level (i.e., going from 0 to 1), 
-# we expect a 0.11 increase in the expected value of apply on the log odds scale, given all of the other variables in the model are held constant.
+
+```
+
+
+Since the coefficients from the model is difficult to interpret because they are scaled interms of logs. We could convert them into odds ratios.
+
+```{r}
 
 # odds ratios
 exp(coef(m))
@@ -63,3 +93,7 @@ exp(coef(m))
 # odds ratios & CI
 ci = exp(cbind(OR = coef(m), ci))
 ci
+
+```
+
+
