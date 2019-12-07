@@ -9,21 +9,22 @@ Tasks to be completed:
 ### Question: 
 #### Do people with higher carbohydrate intake feel more sleepy during the day?
 
-### Data Source: *[NHANES 2015-2016](https://wwwn.cdc.gov/nchs/nhanes/ContinuousNhanes/Default.aspx?BeginYear=2015)*
+### Data Source: 
+#### *[NHANES 2015-2016](https://wwwn.cdc.gov/nchs/nhanes/ContinuousNhanes/Default.aspx?BeginYear=2015)*
 
 ### Group Member and Work Division:
-#### Yuying Wang (Stata)
+#### Yuying Wang [Stata](https://github.com/yuywang1227/Stat-506-Project/tree/master/Stata)
 1. project.do
 2. project.Rmd
 3. project.html
 
-#### Yehao Zhang (R)
+#### Yehao Zhang [R](https://github.com/yuywang1227/Stat-506-Project/tree/master/R)
 1. group_project_R.R
 2. group_project_R.Rmd
 3. group_project_R.html
 
-#### Group Work
+#### [Group Work](https://github.com/yuywang1227/Stat-506-Project/tree/master/report)
 1. final_report.Rmd	
 2. final_report.html
 
-### Collaboration
+### [Collaboration](https://github.com/yuywang1227/Stat-506-Project/pulls)
