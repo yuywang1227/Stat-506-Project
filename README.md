@@ -8,7 +8,8 @@ Tasks to be completed:
 
 ### Question: Do people with higher carbohydrate intake feel more sleepy during the day?
 
-### Data Source: [NHANES 2015-2016](https://wwwn.cdc.gov/nchs/nhanes/ContinuousNhanes/Default.aspx?BeginYear=2015)
+### Data: 
+Three data sets (Sleep Disorder, Demographics, Total Nutrients day 1) are used in the analysis, retrieved from [NHANES 2015-2016](https://wwwn.cdc.gov/nchs/nhanes/ContinuousNhanes/Default.aspx?BeginYear=2015).
 
 ### Group Member and Work Division:
 #### Yuying Wang [Stata](https://github.com/yuywang1227/Stat-506-Project/tree/master/Stata)
