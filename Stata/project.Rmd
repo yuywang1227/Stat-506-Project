@@ -1,0 +1,134 @@
+---
+title: "Group 6: Ordinal Logistic Regression"
+subtitle: 'Do people with higher carbohydrate intake feel more sleepy during the day?'
+author: "Yuying Wang"
+date: "12/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(devtools)
+# install_github("hemken/Statamarkdown")
+library(Statamarkdown)
+stataexe <- "C:/Program Files/Stata16/StataSE-64.exe"
+knitr::opts_chunk$set(engine.path=list(stata=stataexe))
+```
+
+## This is a markdown file to output Stata code from **project.do** into html file.
+
+```{stata install, include = FALSE}
+* intall package for brant test to check assumption
+net from http://www.indiana.edu/~jslsoc/stata/
+net install spost13_ado
+ssc install gologit2
+ssc install estout
+```
+
+### a. Data import and cleaning
+Three data sets are imported into Stata and variables are recoded or created.
+
+```{stata data cleaning}
+* import data and keep and rename relevant variables
+* import total nutrient day 1
+fdause DR1TOT_I.XPT, clear
+quietly compress
+gsort +seqn
+generate carb_ratio = dr1tcarb*4 / dr1tkcal
+* 0 for carb_ratio between 0.45 and 0.65
+generate carb_level = 0
+replace carb_level = 1 if carb_ratio <= 0.45
+replace carb_level = 2 if carb_ratio >= 0.65
+keep seqn carb_level
+save DR1TOT.dta, replace
+
+* import sleep disorder data
+fdause SLQ_I.XPT, clear
+quietly compress
+gsort +seqn
+keep seqn sld012 slq120
+* drop 'dont know' response
+drop if slq120 == 9
+rename sld012 sleep_hr
+rename slq120 sleepy_freq
+merge 1:1 seqn using DR1TOT.dta
+drop _merge
+save DRTOT_SLP.dta, replace
+
+* import demographics data
+fdause DEMO_I.XPT, clear
+quietly compress
+gsort +seqn
+generate winter = 0
+replace winter = 1 if ridexmon == 1
+* 0 male 1 female
+generate female = riagendr - 1
+keep seqn female ridageyr winter
+rename ridageyr age_yr
+keep if age_yr >= 5
+merge 1:1 seqn using DRTOT_SLP.dta
+keep if _merge == 3
+drop _merge
+rename seqn respondent_id
+label variable winter "1: November 1 through April 30"
+label variable female "1: female, 0: male"
+label variable carb_level "Ratio of carbs intake out of daily calorie intake"
+label define sleepy 0 "Never" 1 "Rarely" 2 "Sometimes" 3 "Often" 4 "Almost always", add
+label values sleepy_freq  sleepy
+label define level 0 "suggested range" 1 "below range(<=0.45)" 2 "above range(>=0.65)", add
+label values carb_level level
+save DRTOT_SLP_DEMO.dta, replace
+```
+
+
+### b. Descriptive statistics
+
+Below, the first six rows of the cleaned data are shown. Also, a contingency table for key variables __sleepy_freq__ and __carb_level__ indicates that numbers of observations are not evenly distributed among groups, especially, **above range** in __carb_level__ and **Almost always** in __sleepy_freq__ are underrepresented in the sample, but they still have a good size to be run in the model.
+```{stata summary, cleanlog = FALSE, echo = FALSE}
+use DRTOT_SLP_DEMO.dta
+list in 1/6
+tab carb_level sleepy_freq
+```
+
+### c. Model assumption
+Due to the natural order that comes with our response variable __sleepy_freq__, an ordinal logistic regression is intended to be fit on the data. Besides the requirement of dependent variable measured on an ordinal level, the specific model also assumes 1) no multicollinearity among independent variables and 2) proportional odds, which means the effect of each independent variable is assumed to be the same over all levels of our response variable. Since gologit2 will output a message if there is any collinear predictors and automatically drop that variables, so we are left with __Brant Test__ to check if the other assumption is met.
+
+
+```{stata assumption, cleanlog = FALSE, echo = FALSE}
+use DRTOT_SLP_DEMO.dta
+* ordered logistic regression (proportional odds assumption)
+quietly ologit sleepy_freq i.carb_level sleep_hr female age_yr winter
+brant
+```
+
+### d. Alternative approach
+As shown in the results above, the proportional odds assumption is violated, so next we will try the unrestrictive Generalized Logistic Regression model which does not hold the assumption of proportional odds. However, the generalized model does not assume the response to be ordinal, can lead to negative probabilities, and is hard to interpret. So we do not consider this model. 
+Stata also provides another model that is more restrictive than the Generalized Logistic Regression but less restrictive than the Ordinal Logistic Regression. This partial proportional odds model does not appear to have different coefficient estimates from the original model and it is also not a command in R, so it will only be breifly discussed in the additional analysis section.
+```{stata model comparison, cleanlog = FALSE, echo = FALSE}
+use DRTOT_SLP_DEMO.dta
+* generalized
+quietly gologit2 sleepy_freq i.carb_level sleep_hr female age_yr winter, store(golog)
+* same as ologit
+quietly gologit2 sleepy_freq i.carb_level sleep_hr female age_yr winter, store(olog) pl
+* Partial Proportional Odds Model (constraints from brant test)
+quietly gologit2 sleepy_freq i.carb_level sleep_hr female age_yr winter, store(partialolog) pl(age_yr i.carb_level female)
+* compare generalized and ordinal
+lrtest olog golog
+* compare ologit and partial ologit
+lrtest partialolog olog, stat
+estout olog partialolog, cells(b(star fmt(3)))
+```
+
+### e. Coefficient table and Marginal effects
+In fact, it is common that the assumption of proportional odds is not met in real data sets. Moreover, we want to retain the original value of the data to eliminate loss of information, so we turn back to __Ordinal logistic Regression__ and get the output below.
+
+```{stata results, cleanlog = FALSE, echo = FALSE}
+use DRTOT_SLP_DEMO.dta
+quietly ologit sleepy_freq i.carb_level sleep_hr female age_yr winter
+* coefficient table for ordinal logistic model
+esttab ., wide label title(Rgression Table Ordinal Logistic Regression Model) addnote("Source: DRTOT_SLP_DEMO.dta")
+* marginal effect for carb_level
+mtable, dydx(carb_level)
+```
+
+
+
