@@ -1,0 +1,23 @@
+Peer Review for Group 6 Project
+Script by Yehao Zhang
+Reviewed by Xiru Lyu, xlyu@umich.edu
+
+1. Core and additional analyses
+
+Your codes work as advertised and are very efficient! Good job! Although you do have comments throughout your script, I would suggest adding some more detailed comments expecially on how you cleaned the dataset.
+
+2. Common sections
+
+First of all, the current version of the draft needs additional analysis and results sections.
+
+For the data section, I think it would more helpful to outline specifically on why you choose these variables and how you manipulate them to fit the model. How many observations are available for analysis after the data cleaning process? I see from your R script that you only choose responses from respondents who are older than 16 years old. Please explain the reason in your write up.
+
+Also, in the methods section, it would be more helpful to elaborate on the ordinal regression model that you want to fit. For example, can you write a formula for the fitted model?
+
+3. Git utilization
+
+You have a very clear ReadMe section that shows each group member's contribution and also a list of to-dos for the final report. Hyperlinks are also very helpful to direct the visitor to the desired destination on GitHub for browsing files. Both group members have at least two commits. Nice work!
+
+4. Quality of presentation
+
+For the core analysis report under the R folder, I think it would look a lot clearer if you can hide message displayed when loading packaages and fitting models. Also, for outputs of the model, you may consider to set the number of decimal places and also have output tables rather than simply results from the console. You also want to discuss your findings from the fitted model. 
