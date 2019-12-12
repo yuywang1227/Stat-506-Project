@@ -20,9 +20,9 @@ Three data sets (Sleep Disorder, Demographics, Total Nutrients Intake First Day)
 1. project.Rmd	
 2. project.html
 
-### Collaboration
+### Collaboration:
 [Code Review](https://github.com/yuywang1227/Stat-506-Project/pulls)
 
-### Note
+### Note:
 The Brant Test and Mtable command which both come from the Spost13_ado package in Stata fail to be installed on 12/11. 
 It was successfully downloaded the day before on 12/10, so I screenshot the marginal effects table formatted by Mtable because it looks nicer than the command margins, dydx().
