@@ -1,15 +1,9 @@
-## Stat 506 Project - Group 6
-
-Tasks to be completed:
-- [ ] 1. output Stata to html 
-- [ ] 2. continue working on core analysis and result
-- [ ] 3. use tabbed section to inlcude codes for R and Stata for a comparison
-- [ ] 4. use pull request to review code
+## Stat 506 Project - Group 6 Ordinal Logistic Regression
 
 ### Question: Do people with higher carbohydrate intake feel more sleepy during the day?
 
 ### Data: 
-Three data sets (Sleep Disorder, Demographics, Total Nutrients day 1) are used in the analysis, retrieved from [NHANES 2015-2016](https://wwwn.cdc.gov/nchs/nhanes/ContinuousNhanes/Default.aspx?BeginYear=2015).
+Three data sets (Sleep Disorder, Demographics, Total Nutrients Intake First Day) are used in the analysis, retrieved from [NHANES 2015-2016](https://wwwn.cdc.gov/nchs/nhanes/ContinuousNhanes/Default.aspx?BeginYear=2015).
 
 ### Group Member and Work Division:
 #### Yuying Wang [Stata](https://github.com/yuywang1227/Stat-506-Project/tree/master/Stata)
@@ -22,9 +16,13 @@ Three data sets (Sleep Disorder, Demographics, Total Nutrients day 1) are used i
 2. group_project_R.Rmd
 3. group_project_R.html
 
-#### Group Work [Report](https://github.com/yuywang1227/Stat-506-Project/tree/master/report) (to do)
-1. final_report.Rmd	
-2. final_report.html
+#### Group Work [Report](https://github.com/yuywang1227/Stat-506-Project/tree/master/report)
+1. project.Rmd	
+2. project.html
 
 ### Collaboration
-1. [Code Review](https://github.com/yuywang1227/Stat-506-Project/pulls) (to do)
+[Code Review](https://github.com/yuywang1227/Stat-506-Project/pulls)
+
+### Note
+The Brant Test and Mtable command which both come from the Spost13_ado package in Stata fail to be installed on 12/11. 
+It was successfully downloaded the day before on 12/10, so I screenshot the marginal effects table formatted by Mtable because it looks nicer than the command margins, dydx().
