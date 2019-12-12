@@ -1,78 +1,219 @@
 ---
-title: "Project"
+title: "Group 6: Ordinal Logistic Regression"
+subtitle: 'Do people with higher carbohydrate intake feel more sleepy during the day?'
 author: "Yuying Wang Yehao Zhang"
-date: "12/5/2019"
+date: "12/11/2019"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
+# install.packages("devtools")
+# library(devtools)
+# install_github("hemken/Statamarkdown")
+# library(Statamarkdown)
+#library(knitr)
+library(data.table)
+library(tidyverse)
+library(kableExtra)
+library(foreign)
+library(MASS)
+library(brant)
+
+#install.packages("devtools")
 library(devtools)
+#install_github("hemken/Statamarkdown")
 library(Statamarkdown)
-library(RStata)
+stataexe <- "C:/Program Files/Stata16/StataSE-64.exe"
+knitr::opts_chunk$set(engine.path=list(stata=stataexe))
 ```
 
-# Introduction
-This project is aimed to answer the question __Do people with higher carbohydrate intake feel more sleepy during the day?__. According to the National Sleep Foundation, carbs could cause blood sugar to spike quickly, followed by a drop that can leave people feeling tired after eating. So, it brought up our interest to examine the specific relationship through data *NHANES 2015-2016* available online with a decent amount of sample size. 
 
-A regression model is fit on the response variable __sleepiness__ and independent variable __carbohydrate intake ratio__, controlling for other variables found relevant from the data sets to study if there is evidence supporting a positive relationship.
+```{stata install, include = FALSE}
+ssc install oparallel
+ssc install gologit2
+ssc install estout
+```
 
 
-# Data: 
-3 data sets extracted from `https://wwwn.cdc.gov/nchs/nhanes/ContinuousNhanes/Default.aspx?BeginYear=2015`
+## Introduction
+
+Carbohydrates are one of 3 macronutrients found in food, and also the body's main source of energy in a healthy, balanced diet. They are broken down into glucose (sugar) before being absorbed into the bloodstream, and then the glucose enters the body's cells with the help of insulin. According to the National Sleep Foundation, carbohydrates could cause blood sugar to spike quickly, followed by a drop that leaves people feeling tired after eating.
+
+So, it brought up our interest to examine this specific relationship through data *NHANES 2015-2016*. In the following analysis done in Stata and R, an Ordinal Logistic Regression model is fit on the response variable __sleepy__ and independent variable __carbohydrate intake ratio__, controlling for other factors found relevant in the data to study if there is evidence supporting a positive relationship and answer the question __Do people with higher carbohydrate intake feel more sleepy during the day?__ 
+
+
+## Data
+The National Health and Nutrition Examination Survey (NHANES) is a program of studies designed to assess the health and nutritional status of adults and children in the United States. Three data sets from 2015 to 2016 are used in the analysis, and they are *[Dietary Interview - Total Nutrient Intakes, First Day (DR1TOT_I)](https://wwwn.cdc.gov/Nchs/Nhanes/2015-2016/DR1TOT_I.htm)*, *[Sleep disorders (SLQ_I)](https://wwwn.cdc.gov/Nchs/Nhanes/2015-2016/SLQ_I.htm)*, and *[Demographic Variables and Sample Weights (DEMO_I)](https://wwwn.cdc.gov/Nchs/Nhanes/2015-2016/DEMO_I.htm)*.
 
 <ul>
-<li>DR1TOT_I.XPT: Dietary Interview - Total Nutrient Intakes, First Day
-<ul>
-<li>DR1TKCAL - Energy (kcal)</li>
-<li>DR1TCARB - Carbohydrate (gm)</li>
-</ul>
+<li> __DR1TOT_I.XPT: Dietary Interview - Total Nutrient Intakes, First Day__
+
+We define our key independent variable __carb_level__ as a 3-category factor indicating the ratio of carbs intake out of daily calorie intake.
+
+First, the ratio is calculated through $\small{\text{4*DR1TCARB/DR1TKCAL}}$, where 4 represents the unit conversion from gram to kcal for carbohydrate. Then, according to the carbohydrate intake suggested by the Dietary Guidelines for Americans, which is 45 to 65 percent of total diet, a factor variable is created by assigning 0 to ratios that fall in this group, 1 to ratios lower than the suggested level, and 2 to ratios higher than the suggested level.
+
+```{r, echo=FALSE}
+v = c("DR1TKCAL", "DR1TCARB", "carb_level")
+d = c("Energy (kcal)",
+      "Carbohydrate (gm)",
+      "Ratio of carbs intake out of daily calorie intake: 0 - suggested range, 1 - below range, 2 - above range")
+data.table::data.table(Variable = v, Description  = d) %>%
+  knitr::kable(align = "l") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), position = "left")
+```
+
 </li>
-<li>SLQ_I.XPT: Sleep Disorders
-<ul>
-<li>SLD012 - Sleep hours</li>
-<li>SLQ120 - How often feel overly sleepy during day?</li>
-</ul>
+<li> __SLQ_I.XPT: Sleep Disorders__
+
+We choose __sleepy_freq__ as the response variable in the analysis. __sleep_hr__ is our control variable that might effect the response variable.
+```{r, echo=FALSE}
+v = c("SLD012", "SLQ120")
+n = c("sleep_hr", "sleepy_freq")
+d = c("Sleep hours",
+      "How often feel overly sleepy during day? 
+      0 - Never, 1 - Rarely, 2 - Sometimes, 3 - Often, 4 - Almost always, 9 - Don't know")
+data.table::data.table(Variable = v, Rename = n, Description  = d) %>%
+  knitr::kable(align = "l") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), position = "left")
+```
 </li>
-<li>DEMO_I.XPT: Demographic Variables and Sample Weights
-<ul>
-<li>RIDAGEYR - Age in years at screening</li>
-<li>RIAGENDR - Gender</li>
-<li>RIDEXMON - Six month time period</li>
-</ul>
+<li> __DEMO_I.XPT: Demographic Variables and Sample Weights__
+
+We include __age_yr__, __female__ and __winter__ as control variables in the regression model. Age below 5 are discarded from the sample because [study](https://hqlo.biomedcentral.com/articles/10.1186/1477-7525-5-1) finds children as young as 5 years old can reliably and validly self-report their health-related quality of life.
+```{r,echo=FALSE}
+v = c("RIDAGEYR", "RIAGENDR", "RIDEXMON")
+n = c("age_yr", "female", "winter")
+d = c("Age in years at screening: >=5",
+      "Gender: 0 - male, 1 - female",
+      "Six month time period: 0 - May 1 through October 31, 1 - November 1 through April 30")
+data.table::data.table(Variable = v, Rename = n, Description  = d) %>%
+  knitr::kable(align = "l") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), position = "left")
+```
 </li>
 
-* DR1TOT_I.XPT: Dietary Interview - Total Nutrient Intakes, First Day
-  + DR1TKCAL - Energy (kcal)
-  + DR1TCARB - Carbohydrate (gm)
-* SLQ_I.XPT: Sleep Disorders
-  + SLD012 - Sleep hours
-  + SLQ120 - How often feel overly sleepy during day?
-* DEMO_I.XPT: Demographic Variables and Sample Weights
-  + RIDAGEYR - Age in years at screening
-  + RIAGENDR - Gender
-  + RIDEXMON - Six month time period
 
-# Methods
-Three datasets are merged together by the respondent id. An independent variable indicating the carbohydrate intake ratio is created through $DR1TCARB*4/DR1TKCAL$, where 4 represents the unit conversion from gram to kcal for carbohydrate. Then based on the suggested Carbohydrate intake from the Dietary Guidelines for Americans, which is 45 to 65 percent of total diet, a factor variable is created by assigning 0 to those ratio that fall in this group, 1 to those ratio lower than the suggested level, and 2 tothose ratio higher than the suggested level.
+## Methods
 
-Since our response variable __SLQ120__ is an order factor with the lowest value representing Rarely and the highest level representing Almost always, we use ordinal logistic regression to fit the model in R and Stata. 
+In this project, we select ordinal logistic regression as our main analysis approach because the response variable __carb_level__, is categorical and ordinal, which means there is an ordering in the categories. A simple logistic regression model assumes there is no ordering in the response variable and the log of odds that an event occurs is simply a linear combination of the independent variables.
 
-# Core Analysis
-## Stata code
-```{stata}
+However, ordinal logistic regression can overcome this limitation by using cumulative events for the log of the odds computations. Let $Y$ be an ordinal outcome with __i__ categories. Then $P(Y<j)$ is the cumulative probability of $Y$ less than or equal to a specific category $i = 1,...,i-1$. The odds of being less than or equal to this category can be defined as 
+\[
+%
+\frac{P(Y\leq i)}{P(Y>i)}\ \textrm{for} \ i=1,...,i-1.
+%
+\]
+
+And the log odds is defined as 
+\[
+%
+log\frac{P(Y\leq i)}{P(Y>i)} = logit(P(Y\leq i))
+%
+\]
+
+The ordinal logistic regression model is defined as
+\[
+%
+logit(P(Y\leq i)) = \beta_{i0}+\beta_1x_1+...+\beta_jx_j
+%
+\]
+where $x_1,...x_j$ are the independent variables. The intercepts are different for each category but the slopes are constant across categories because of the proportional odds assumption, which means the effect of each independent variable is assumed to be the same over all levels of our response variable.
+
+So here in our model
+\[
+%
+logit(P({sleepyfreq}\leq i)) = \beta_{i0}+\beta_1{carblevel}+\beta_2sleephr +\beta_3female + \beta_4ager + \beta_5winter
+%
+\]
+
+## Core Analysis {.tabset .tabset-pills}
+
+### R
+As discussed in the data section, we first perform data cleaning on each dataset and merge them into one. Finally, the rows that contain NAs are removed.
+
+```{r, message=FALSE, warning=FALSE}
+## Data
+# Import data
+sleep_disorder <- setDT(read.xport("SLQ_I.XPT"))
+tot_nutrition_d1 <-setDT(read.xport("DR1TOT_I.XPT"))
+demo <- setDT(read.xport("DEMO_I.XPT"))
+# Data cleaning
+sleep_disorder = sleep_disorder[SLQ120 <= 4, .(respondent_ID = SEQN, sleep_hr = SLD012, sleepy_freq = factor(SLQ120,))]
+tot_nutrition = tot_nutrition_d1[, .(respondent_ID = SEQN, energy = DR1TKCAL, CHO = DR1TCARB)
+                                ][, .(p_CHO = CHO*4/energy), by = respondent_ID
+                                ][, carb_level := "suggested range"
+                                ][p_CHO <= 0.45, carb_level := "below range(<=0.45)" 
+                                ][p_CHO >= 0.65, carb_level := "above range(>=0.65)"
+                                ][, carb_level := factor(carb_level)
+                                ]
+demo = demo[RIDAGEYR >= 5, .(respondent_ID = SEQN, winter = factor(RIDEXMON), female = factor(RIAGENDR-1), age = RIDAGEYR)]
+# Merge these three datasets
+sleep = merge(sleep_disorder, tot_nutrition, by = "respondent_ID") %>%
+  merge(. , demo, by = "respondent_ID") %>%
+  na.omit(.)
+sleep # the cleaned data
+```
+
+In the next step, we need to assess whether the ordinal regression is appropriate for this analysis.
+Now the dataset "sleep" is ready to fit the ordered logistic regression model.
+
+```{r, message=FALSE, warning=FALSE}
+# fit ordered logit model 
+m <- polr(sleepy_freq ~ sleep_hr + carb_level + winter + female + age, data = sleep, Hess = TRUE)
+# view a summary of the model
+summary(m)
+```
+
+To be valid to fit the ordinal logistic regression model, the proportional odds assumption, also known as the parallel regression assumption must be met. It assumes the effect of independent variables is identical for each log of odds computation. In R, we can perform a brant test using the brant function from the brant package. The result generated by the brant test suggests that the parallel regression assumption does not hold since not all p-values is larger than 0.05.
+
+```{r, message=FALSE, warning=FALSE}
+brant(m)
+```
+
+
+Next, the p-values are calculated by comparing the t-value against the standard normal distribution. The 95% CI for the parameter estimates could be obtained using the "confint" function.
+
+```{r, message=FALSE, warning=FALSE}
+# store the coefficientts
+mcoef <- coef(summary(m))
+# calculate p values
+p <- pnorm(abs(mcoef[, "t value"]), lower.tail = FALSE) *2
+mcoef = cbind(round(mcoef,3), "pvalue" = round(p,3))
+mcoef
+# 95% CI
+(ci <- round(confint(m), 3))
+```
+
+Since the coefficients from the model is difficult to interpret because they are scaled interms of logs. We could convert them into odds ratios.
+
+```{r, message=FALSE, warning=FALSE}
+# odds ratios
+round(exp(coef(m)),3)
+# odds ratios & CI
+ci = exp(cbind(OR = coef(m), ci))
+round(ci,3)
+```
+
+
+### Stata
+
+a. Data import and cleaning
+
+Three data sets are imported into Stata and variables are recoded or created.
+
+```{stata data cleaning}
 * import data and keep and rename relevant variables
-* import total nutrient day 1 2015
+* import total nutrient day 1
 fdause DR1TOT_I.XPT, clear
 quietly compress
 gsort +seqn
 generate carb_ratio = dr1tcarb*4 / dr1tkcal
 * 0 for carb_ratio between 0.45 and 0.65
 generate carb_level = 0
-replace carb_level = 1 if carb_ratio < 0.45
-replace carb_level = 2 if carb_ratio > 0.65
+replace carb_level = 1 if carb_ratio <= 0.45
+replace carb_level = 2 if carb_ratio >= 0.65
 keep seqn carb_level
-save DR1TOT_l.dta, replace
-
+save DR1TOT.dta, replace
 * import sleep disorder data
 fdause SLQ_I.XPT, clear
 quietly compress
@@ -80,66 +221,140 @@ gsort +seqn
 keep seqn sld012 slq120
 * drop 'dont know' response
 drop if slq120 == 9
-rename sld012 sleephr
-rename slq120 sleepy
-merge 1:1 seqn using DR1TOT_l.dta
+rename sld012 sleep_hr
+rename slq120 sleepy_freq
+merge 1:1 seqn using DR1TOT.dta
 drop _merge
 save DRTOT_SLP.dta, replace
-
-* import demographic data
+* import demographics data
 fdause DEMO_I.XPT, clear
 quietly compress
 gsort +seqn
 generate winter = 0
 replace winter = 1 if ridexmon == 1
 * 0 male 1 female
-generate gender = riagendr - 1
-keep seqn gender ridageyr winter
-rename ridageyr age
+generate female = riagendr - 1
+keep seqn female ridageyr winter
+rename ridageyr age_yr
+keep if age_yr >= 5
 merge 1:1 seqn using DRTOT_SLP.dta
 keep if _merge == 3
 drop _merge
-label define sleepiness 0 "Never" 1 "Rarely" 2 "Sometimes" 3 "Often" 4 "Almost always"
-label values sleepy sleepiness
+rename seqn respondent_id
+label variable winter "1: November 1 through April 30"
+label variable female "1: female, 0: male"
+label variable carb_level "Ratio of carbs intake out of daily calorie intake"
+label define sleepy 0 "Never" 1 "Rarely" 2 "Sometimes" 3 "Often" 4 "Almost always", add
+label values sleepy_freq  sleepy
+label define level 0 "suggested range" 1 "below range(<=0.45)" 2 "above range(>=0.65)", add
+label values carb_level level
 save DRTOT_SLP_DEMO.dta, replace
-
-* response: sleepy (five levels: 0-4)
-* independent variables: carb_ratio
-* control variables: gender, age, winter, sleephr
-
-* ordered logistic regression (proportional odds assumption)
-ologit sleepy i.carb_level sleephr gender age winter
-
-* intall package for brant test to check assumption
-net from http://www.indiana.edu/~jslsoc/stata/
-net install spost13_ado
-brant
-
-* assumption for ologit violated so try generalized
-ssc install gologit2
-
-* compare between models
-quietly gologit2 sleepy i.carb_level sleephr gender age winter, store(gologit)
-* Partial Proportional Odds Model (constraints from brant test)
-quietly gologit2 sleepy i.carb_level sleephr gender age winter, store(gologit2) pl(age i.carb_level gender)
-quietly gologit2 sleepy i.carb_level sleephr gender age winter, store(ologit) pl
-* ologit is too restrictive
-lrtest ologit gologit
-* if use significance level 0.001, partial proportional odds is not too restrictive
-lrtest gologit gologit2
-
-* model we chose
-quietly gologit2 sleepy i.carb_level sleephr gender age winter, store(gologit2) pl(age i.carb_level gender)
-
-* coefficient table
-esttab gologit2, wide label title(Rgression Table for Partial Proportional Odds Model) addnote("Source: DRTOT_SLP_DEMO.dta")
-
-* marginal effect for carb_level
-mtable, dydx(carb_level)
 ```
 
 
-# Additional Analysis
+b. Descriptive statistics
 
-# Results
+Below, the first six rows of the cleaned data are shown. Also, a contingency table for key variables __sleepy_freq__ and __carb_level__ indicates that numbers of observations are not evenly distributed among groups, especially, **above range** in __carb_level__ and **Almost always** in __sleepy_freq__ are underrepresented in the sample, which indicates a relationship between these two variables.
+
+```{stata summary, cleanlog = FALSE, echo = FALSE}
+use DRTOT_SLP_DEMO.dta
+list in 1/6
+tab carb_level sleepy_freq
+```
+
+c. Model assumption
+
+Due to the fact that our response variable __sleepy_freq__ is an ordinal factor, an ordinal logistic regression is fit on the data. Besides the requirement of dependent variable measured on an ordinal level, this model also assumes 1) no multicollinearity among independent variables and 2) proportional odds, which means the effect of each independent variable is assumed to be the same over all levels of our response variable. In Stata, **gologit2** will output a message if there is any collinear predictors and automatically drop that variables, so we are left with __Brant Test__ to check if the other assumption is met.
+
+```{stata assumption, cleanlog = FALSE, echo = FALSE}
+use DRTOT_SLP_DEMO.dta
+* ordered logistic regression (proportional odds assumption)
+quietly ologit sleepy_freq i.carb_level sleep_hr female age_yr winter
+oparallel, brant
+```
+
+d. Alternative approach
+
+As shown in the results above, the proportional odds assumption is violated, so next we will try the unrestrictive Generalized Logistic Regression model that does not hold the assumption of proportional odds. However, the generalized model does not assume the response to be ordinal, can lead to negative probabilities, and is hard to interpret. So we do not consider this model. 
+
+```{stata model comparison, cleanlog = FALSE, echo = FALSE}
+use DRTOT_SLP_DEMO.dta
+* generalized
+quietly gologit2 sleepy_freq i.carb_level sleep_hr female age_yr winter, store(golog)
+* same as ologit
+quietly gologit2 sleepy_freq i.carb_level sleep_hr female age_yr winter, store(olog) pl
+* compare generalized and ordinal
+lrtest olog golog
+```
+
+e. Coefficient table and Marginal effects
+
+It is common that the assumption of proportional odds is not met in real data sets. And we want to retain the original value of the data to eliminate loss of information, so we turn back to __Ordinal logistic Regression__ and get the output below.
+
+```{stata results, cleanlog = FALSE, echo = FALSE}
+use DRTOT_SLP_DEMO.dta
+quietly ologit sleepy_freq i.carb_level sleep_hr female age_yr winter, or
+* coefficient table for ordinal logistic model
+esttab ., wide label title(Rgression Table Ordinal Logistic Regression Model) addnote("Source: DRTOT_SLP_DEMO.dta") ci
+* marginal effect for carb_level
+margins, dydx(carb_level)
+```
+
+## Additional Analysis
+
+### Partial Proportional Odds Model
+The [gologit2](https://www.stata.com/meeting/4nasug/gologit2.pdf) in Stata provides another approach: Partial Proportional Odds Model for Ordinal Dependent Variables, which is more restrictive than the Generalized Logistic Regression but less restrictive than the Ordinal Logistic Regression by allowing the assumption of proportional odds to be relaxed for some of the independent variables.
+
+The Brant Test above shows that the proportional odds assumption is not violated by __carb_level__, __female__ and __age_yr__ at 0.04 significance level, so we  restrict the assumption on those variables and relax on the other two.
+
+```{stata, cleanlog = FALSE, echo = FALSE}
+use DRTOT_SLP_DEMO.dta
+* Partial Proportional Odds Model 
+quietly gologit2 sleepy_freq i.carb_level sleep_hr female age_yr winter, store(partialolog) pl(age_yr i.carb_level female)
+quietly gologit2 sleepy_freq i.carb_level sleep_hr female age_yr winter, store(olog) pl
+* compare ologit and partial ologit
+lrtest partialolog olog, stat
+estout olog partialolog, cells(b(star fmt(3)))
+```
+
+As indicated from the __lrtest__, Partial Proportional Odds Model performs better than the Ordinal Logistic Regression. But it is also shown from the regression table that they have very similar coefficient estimates for our key independent variable __carb_level__, and since there is no convenient way to do this in R, Ordinal Logistic regression remains to be the main model used in the analysis.
+
+
+## Discussion and Results
+
+To answer the question __Do people with higher carbohydrate intake feel more sleepy during the day?__ three data sets are merged together and we get a total of 6058 observations. Due to the ordering that comes with the response factor __sleepy_freq__, it is natural to fit the data with Ordinal Logistic Regression. Although the proportional odds assumption is violated as indicated by the Brant Test (a significant test statistic provides evidence that the proportional odds assumption has been violated), it is common that the assumption is not met in real data sets. 
+
+As alternative approaches, unrestrictive Generalized Logistic Regression and Partial Proportional Odds model are fit on the data. Although they perform better according to likelihood-ratio test, we turn back to Ordinal Logistic Regression due to the following reasons.
+
+<ul>
+<li>
+For Generalized Logistic Regression, first it frees all variables from the proportional odds constraint, even though the assumption is only be violated by a few of them. Also, it does not require ordinality which may lead to loss of information that comes with the original data. Lastly, its estimated probabilities can go negative and results are hard to interpret.
+</li>
+<li>
+For Partial Proportional Odds model, predictors without the assumption constraint are still hard to interpret. Also, a closer look at the coefficient estimates tell us it does not differ much from the result of the Ordinal Logistic Regression.
+</li>
+</ul>
+
+So from the results we get from Ordinal Logistic Regression model above,when compared to level __suggested range__, __Below range__ is positively related to the odds of feeling sleepy while __above range__ is negatively related to the odds of feeling sleepy.
+```{r,echo=FALSE, fig.cap="Marginal Effect of carb_level"}
+knitr::include_graphics("margins.png")
+```
+
+The marginal effects of __carb_level__ indicates that when compared to people with carbs intake ratio in suggested range, people with lower carbs intake ratio are 1.6% less likely to never feel sleepy and 0.9% more likely to almost always feel sleepy. People with higher carbs intake ratio are 2.3% more likely to never feel sleepy and 1% less likely to almost always feel sleepy.
+
+The output does not provide evidence that people with higher carbohydrate intake in general feel more sleepy during the day. In fact, carbohydrates can be divided into three main groups: sugar, starch and fibre. To study each of their specific effects, a more detailed analysis can be done in the future.
+
+## References
+[Ordered Logit Models – Basic & Intermediate Topics](https://www3.nd.edu/~rwilliam/stats3/Ologit01.pdf)
+<br />
+[gologit2: Generalized Logistic Regression/ Partial Proportional Odds](https://www3.nd.edu/~rwilliam/gologit2/NASUG2005.pdf)
+<br />
+[Ordinal regression models: Problems,solutions, and problems with the solutions](https://www.stata.com/meeting/germany08/GSUG2008.pdf)
+<br />
+[HOW DO I INTERPRET THE COEFFICIENTS IN AN ORDINAL LOGISTIC REGRESSION IN R?](https://stats.idre.ucla.edu/r/faq/ologit-coefficients/)
+<br />
+[Why do we need carbs?](https://www.nhs.uk/live-well/healthy-weight/why-we-need-to-eat-carbs/)
+<br />
+[Does Eating Carbs Make You Sleepy?](https://www.livestrong.com/article/530662-does-eating-carbs-make-you-sleepy/)
+
 
