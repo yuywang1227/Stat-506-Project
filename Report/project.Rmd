@@ -19,6 +19,7 @@ library(foreign)
 library(MASS)
 library(brant)
 
+# set up Stata engine path
 #install.packages("devtools")
 library(devtools)
 #install_github("hemken/Statamarkdown")
@@ -324,22 +325,21 @@ As indicated from the __lrtest__, Partial Proportional Odds Model performs bette
 
 To answer the question __Do people with higher carbohydrate intake feel more sleepy during the day?__ three data sets are merged together and we get a total of 6058 observations. Due to the ordering that comes with the response factor __sleepy_freq__, it is natural to fit the data with Ordinal Logistic Regression. Although the proportional odds assumption is violated as indicated by the Brant Test (a significant test statistic provides evidence that the proportional odds assumption has been violated), it is common that the assumption is not met in real data sets. 
 
-As alternative approaches, unrestrictive Generalized Logistic Regression and Partial Proportional Odds model are fit on the data. Although they perform better according to likelihood-ratio test, we turn back to Ordinal Logistic Regression due to the following reasons.
+As alternative approaches, unrestrictive Generalized Logistic Regression and Partial Proportional Odds model are fit on the data. Although they perform better according to likelihood-ratio tests, we turn back to __Ordinal Logistic Regression__ due to the following reasons.
 
 <ul>
 <li>
-For Generalized Logistic Regression, first it frees all variables from the proportional odds constraint, even though the assumption is only be violated by a few of them. Also, it does not require ordinality which may lead to loss of information that comes with the original data. Lastly, its estimated probabilities can go negative and results are hard to interpret.
+For Generalized Logistic Regression, first, it frees all variables from the proportional odds constraint, even though the assumption is only violated by a few of them. Also, it does not require ordinality which may lead to loss of information that comes with the original data. Lastly, its estimated probabilities can go negative and results are hard to interpret.
 </li>
 <li>
-For Partial Proportional Odds model, predictors without the assumption constraint are still hard to interpret. Also, a closer look at the coefficient estimates tell us it does not differ much from the result of the Ordinal Logistic Regression.
+For Partial Proportional Odds model, predictors without the assumption constraint are still hard to interpret. Also, a closer look at the coefficient estimates tells us it does not differ much from the result of the Ordinal Logistic Regression.
 </li>
 </ul>
 
-So from the results we get from Ordinal Logistic Regression model above,when compared to level __suggested range__, __Below range__ is positively related to the odds of feeling sleepy while __above range__ is negatively related to the odds of feeling sleepy.
+As shown in the regression table we get from Ordinal Logistic Regression model above, when compared to level __suggested range__, __Below range__ is positively related to the odds of feeling sleepy while __above range__ is negatively related to the odds of feeling sleepy.
 ```{r,echo=FALSE, fig.cap="Marginal Effect of carb_level"}
 knitr::include_graphics("margins.png")
 ```
-
 The marginal effects of __carb_level__ indicates that when compared to people with carbs intake ratio in suggested range, people with lower carbs intake ratio are 1.6% less likely to never feel sleepy and 0.9% more likely to almost always feel sleepy. People with higher carbs intake ratio are 2.3% more likely to never feel sleepy and 1% less likely to almost always feel sleepy.
 
 The output does not provide evidence that people with higher carbohydrate intake in general feel more sleepy during the day. In fact, carbohydrates can be divided into three main groups: sugar, starch and fibre. To study each of their specific effects, a more detailed analysis can be done in the future.
