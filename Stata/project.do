@@ -13,7 +13,6 @@
 
 /// install
 * intall package 
-ssc install omodel
 ssc install oparallel
 ssc install gologit2
 ssc install estout
@@ -73,14 +72,14 @@ tab carb_level sleepy_freq
 /// check model assumptions
 * ordered logistic regression (proportional odds assumption)
 quietly ologit sleepy_freq i.carb_level sleep_hr female age_yr winter
-brant
+oparallel, brant
 
 * intall package for brant test to check assumption
-net from http://www.indiana.edu/~jslsoc/stata/
-net install spost13_ado
-brant
+*net from http://www.indiana.edu/~jslsoc/stata/
+*net install spost13_ado
+*brant
 
-* assumption violated
+/// alternative models
 * assumption for ologit violated so try generalized
 quietly gologit2 sleepy i.carb_level sleephr gender age winter, store(gologit)
 * Partial Proportional Odds Model (constraints from brant test)
