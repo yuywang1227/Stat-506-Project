@@ -123,7 +123,7 @@ where $x_1,...x_j$ are the independent variables. The intercepts are different f
 So here in our model
 \[
 %
-logit(P({sleepyfreq}\leq i)) = \beta_{i0}+\beta_1{carblevel}+\beta_2sleephr +\beta_3female + \beta_4ager + \beta_5winter
+logit(P({sleepyfreq}\leq i)) = \beta_{i0}+\beta_1{carblevel}+\beta_2sleephr +\beta_3female + \beta_4age + \beta_5winter
 %
 \]
 
