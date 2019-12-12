@@ -1,3 +1,24 @@
+* ---------------------------------------------------------------------------- * 
+* Group Project
+* Stats 506, Fall 2019
+* 
+* Do people with higher carbohydrate intake feel more sleepy during the day?
+*
+* We provide an answer to this question using the NHANES 2015-2016 data from: 
+* https://wwwn.cdc.gov/nchs/nhanes/ContinuousNhanes/Default.aspx?BeginYear=2015
+*
+* Updated: December 10, 2019
+* Author: Yuying Wang, yuywang@umich.edu
+* ---------------------------------------------------------------------------- * 
+
+/// install
+* intall package 
+ssc install omodel
+ssc install oparallel
+ssc install gologit2
+ssc install estout
+
+/// data cleaning
 * import data and keep and rename relevant variables
 * import total nutrient day 1 2015
 fdause DR1TOT_I.XPT, clear
@@ -41,22 +62,26 @@ label define sleepiness 0 "Never" 1 "Rarely" 2 "Sometimes" 3 "Often" 4 "Almost a
 label values sleepy sleepiness
 save DRTOT_SLP_DEMO.dta, replace
 
-* response: sleepy (five levels: 0-4)
-* independent variables: carb_ratio
-* control variables: gender, age, winter, sleephr
+/// summary statistics
+* descriptive statistics
+tab carb_level sleepy_freq
 
+* response: sleepy_freq (five levels: 0-4)
+* independent variables: carb_level
+* control variables: female, age_yr, winter, sleep_hr
+
+/// check model assumptions
 * ordered logistic regression (proportional odds assumption)
-ologit sleepy i.carb_level sleephr gender age winter
+quietly ologit sleepy_freq i.carb_level sleep_hr female age_yr winter
+brant
 
 * intall package for brant test to check assumption
 net from http://www.indiana.edu/~jslsoc/stata/
 net install spost13_ado
 brant
 
+* assumption violated
 * assumption for ologit violated so try generalized
-ssc install gologit2
-
-* compare between models
 quietly gologit2 sleepy i.carb_level sleephr gender age winter, store(gologit)
 * Partial Proportional Odds Model (constraints from brant test)
 quietly gologit2 sleepy i.carb_level sleephr gender age winter, store(gologit2) pl(age i.carb_level gender)
@@ -66,11 +91,12 @@ lrtest ologit gologit
 * if use significance level 0.001, partial proportional odds is not too restrictive
 lrtest gologit gologit2
 
+/// output
 * model we chose
-quietly gologit2 sleepy i.carb_level sleephr gender age winter, store(gologit2) pl(age i.carb_level gender)
+quietly ologit sleepy_freq i.carb_level sleep_hr female age_yr winter, or
 
 * coefficient table
-esttab gologit2, wide label title(Rgression Table for Partial Proportional Odds Model) addnote("Source: DRTOT_SLP_DEMO.dta")
+esttab ., wide label title(Rgression Table Ordinal Logistic Regression Model) addnote("Source: DRTOT_SLP_DEMO.dta") ci
 
 * marginal effect for carb_level
 mtable, dydx(carb_level)
