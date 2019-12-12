@@ -16,7 +16,7 @@ Three data sets (Sleep Disorder, Demographics, Total Nutrients Intake First Day)
 2. group_project_R.Rmd
 3. group_project_R.html
 
-#### Group Work [Report](https://github.com/yuywang1227/Stat-506-Project/tree/master/report)
+#### Group Work [Report](https://github.com/yuywang1227/Stat-506-Project/tree/master/Report)
 1. project.Rmd	
 2. project.html
 
