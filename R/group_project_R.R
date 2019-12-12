@@ -1,3 +1,14 @@
+## Group project by group 6
+## Stats 506, Fall 2019
+## Group Member: Yehao Zhang, Yuying Wang 
+##
+## In this project, the team is going to apply statistical methods to answer the following question:
+##
+## Do people with higher carbohydrate intake feel more sleepy during the day?
+##
+## Author: Yehao Zhang
+## Updated: December 11, 2019
+
 # set local directory
 setwd("C:/Users/zhang/Desktop/fall 2019/git/506/project")
 
@@ -14,18 +25,19 @@ sleep_disorder <- setDT(read.xport("SLQ_I.XPT"))
 tot_nutrition_d1 <-setDT(read.xport("DR1TOT_I.XPT"))
 demo <- setDT(read.xport("DEMO_I.XPT"))
 
-# Data ckeaning
-sleep_disorder = sleep_disorder[SLQ120 <= 4, .(respondent_ID = SEQN, sleep_hr = SLD012, sleepy_freq = factor(SLQ120))]
+# Data cleaning
+sf <- c("never","rarely","sometimes","often","almost always")
+sleep_disorder = sleep_disorder[SLQ120 <= 4, .(respondent_ID = SEQN, sleep_hr = SLD012, sleepy_freq = factor(SLQ120,levels=0:4,labels=sf))]
 
 tot_nutrition = tot_nutrition_d1[, .(respondent_ID = SEQN, energy = DR1TKCAL, CHO = DR1TCARB)
                                 ][, .(p_CHO = CHO*4/energy), by = respondent_ID
-                                ][, CHO_level := 0
-                                ][p_CHO < 0.45, CHO_level := 1
-                                ][p_CHO > 0.65, CHO_level := 2
+                                ][, CHO_level := "suggested range"
+                                ][p_CHO <= 0.45, CHO_level := "below range(<=0.45)" 
+                                ][p_CHO >= 0.65, CHO_level := "above range(>=0.65)"
                                 ][, CHO_level := factor(CHO_level)
                                 ]
 
-demo = demo[RIDAGEYR >= 16, .(respondent_ID = SEQN, six_month = factor(RIDEXMON), gender = factor(RIAGENDR), age = RIDAGEYR)]
+demo = demo[RIDAGEYR >= 5, .(respondent_ID = SEQN, six_month = factor(RIDEXMON), gender = factor(RIAGENDR,levels=c(1,2),labels=c("male","female")), age = RIDAGEYR)]
 
 # merge these three datasets
 sleep = merge(sleep_disorder, tot_nutrition, by = "respondent_ID") %>%
@@ -39,6 +51,11 @@ sleep # the cleaned data
 
 # fit ordered logit model 
 m <- polr(sleepy_freq ~ sleep_hr + CHO_level + six_month + gender + age, data = sleep, Hess = TRUE)
+
+# brant test
+#install.packages("brant")
+library(brant)
+brant(m)
 
 # view a summary of the model
 summary(m)
